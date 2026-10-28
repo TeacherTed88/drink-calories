@@ -121,6 +121,23 @@ button { font: inherit; color: inherit; }
   background: var(--card); color: var(--text); font-size: 15px; text-align: right;
 }
 
+/* ------------------------------ catalog ------------------------------- */
+.cat-head {
+  display: block; width: 100%; text-align: left; margin: 10px 0 6px;
+  padding: 10px 12px; border: 1px solid var(--border); border-radius: 12px;
+  background: var(--card); font-size: 13px; font-weight: 700; cursor: pointer;
+  color: var(--text);
+}
+.cat-arrow { color: var(--text3); }
+.cat-count { float: right; color: var(--text3); font-weight: 400; }
+.addbtn {
+  padding: 8px 14px; border-radius: 10px; border: 1px solid var(--accent);
+  background: transparent; color: var(--accent); font-size: 13px; font-weight: 700;
+  cursor: pointer; flex-shrink: 0;
+}
+.addbtn:active { background: var(--accent); color: #fff; }
+.cbtn.rm { border-color: #e5604d; color: #e5604d; }
+
 /* -------------------------------- toast -------------------------------- */
 .toast {
   position: fixed; left: 50%; bottom: 32px; transform: translateX(-50%) translateY(20px);

@@ -43,7 +43,7 @@
       <div class="lbl" id="wrange"></div>
       <div class="big num"><span id="wkTotal">0</span> <small>kcal this week</small></div>
     </div>
-    <span class="user-chip" id="userChip" title="Signed in as"></span>
+    <span class="user-chip" id="userChip" title="Signed in as — tap to sign out" style="cursor:pointer"></span>
     <div class="hdr-actions">
       <button class="ibtn" id="lockBtn" title="Lock / switch user">&#128274;</button>
       <button class="ibtn" id="clearDay" title="Clear selected day">&#128465;</button>
@@ -57,7 +57,14 @@
   <input id="drinkFilter" class="filter" type="search" placeholder="Filter drinks — e.g. wusu, 珠江, wheat…" autocomplete="off">
 
   <div class="days" id="days"></div>
+
+  <div class="sec"><span>MY DRINKS (most-consumed first)</span>
+    <button class="ibtn" id="editListBtn" title="Remove drinks from your list" style="width:52px;height:28px;font-size:12px">Edit</button>
+  </div>
   <div id="rows"></div>
+
+  <div class="sec"><span>BEER CATALOG — tap ＋ to add to your list</span></div>
+  <div id="catalog"></div>
 
   <div class="totalbar">
     <span class="t" id="dayLbl"></span>
