@@ -4,216 +4,75 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0b0b0f">
-<title>Drink Calories</title>
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Drink Calories</title>
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon.svg">
-<style>
-:root{
-  --bg:#0b0b0f; --card:#17171d; --border:#2a2a33;
-  --text:#f2f2f5; --text2:#b9b9c4; --text3:#8a8a96;
-  --accent:#5b8cff;
-  --c1:#5b8cff; --c2:#e5604d; --c3:#4caf7d; --c4:#9b6ee8; --c5:#8a8a96; --c6:#c9a04e;
-}
-@media (prefers-color-scheme: light){
-  :root{
-    --bg:#f6f6f8; --card:#ffffff; --border:#e2e2e8;
-    --text:#17171d; --text2:#55555f; --text3:#8a8a96;
-  }
-}
-*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0;padding:0}
-body{
-  background:var(--bg); color:var(--text);
-  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Noto Sans SC",sans-serif;
-  font-size:16px; line-height:1.45;
-  max-width:480px; margin:0 auto; padding:16px 14px calc(24px + env(safe-area-inset-bottom));
-}
-button{font:inherit;color:inherit}
-.num{font-variant-numeric:tabular-nums}
-.hdr{display:flex;align-items:flex-end;justify-content:space-between;gap:8px;margin-bottom:12px}
-.lbl{font-size:12px;color:var(--text3)}
-.big{font-size:36px;font-weight:700;line-height:1.1}
-.big small{font-size:14px;font-weight:400;color:var(--text3)}
-.ibtn{width:40px;height:40px;border-radius:10px;border:1px solid var(--border);background:var(--card);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0}
-.ibtn:active{transform:scale(.95)}
-.days{display:flex;gap:4px;margin-bottom:12px}
-.day{flex:1;display:flex;flex-direction:column;align-items:center;gap:1px;padding:8px 0;border:1px solid var(--border);border-radius:12px;background:var(--card);cursor:pointer}
-.day .d{font-size:11px;color:var(--text3)}
-.day .n{font-size:16px;font-weight:600}
-.day .k{font-size:10px;color:var(--text3);min-height:13px}
-.day.sel{background:var(--text);border-color:var(--text)}
-.day.sel .d,.day.sel .n,.day.sel .k{color:var(--bg)}
-.row{display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--card);border:1px solid var(--border);border-radius:12px;margin-bottom:8px}
-.dot{width:10px;height:10px;border-radius:3px;flex-shrink:0}
-.info{flex:1;min-width:0}
-.name{font-size:15px;font-weight:600}
-.serv{font-size:12px;color:var(--text3)}
-.ctl{display:flex;align-items:center;gap:6px}
-.cbtn{width:36px;height:36px;border-radius:10px;border:1px solid var(--border);background:transparent;display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer;user-select:none}
-.cbtn:active{background:var(--border)}
-.cbtn:disabled{opacity:.25}
-.cnt{width:28px;text-align:center;font-size:16px;font-weight:700}
-.totalbar{display:flex;align-items:baseline;justify-content:space-between;padding:14px 16px;border-radius:12px;background:var(--card);border:1px solid var(--border);margin:12px 0}
-.totalbar .t{font-size:13px;color:var(--text2)}
-.totalbar .v{font-size:26px;font-weight:700}
-.sec{font-size:12px;color:var(--text3);margin:18px 2px 8px;font-weight:600;letter-spacing:.02em}
-.wk{display:flex;gap:6px;align-items:flex-end;height:110px;padding:2px 0}
-.wkc{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;justify-content:flex-end}
-.bar{width:70%;border-radius:4px 4px 0 0;background:var(--accent)}
-.wkc.today .bar{background:var(--text)}
-.wkl{font-size:10px;color:var(--text3)}
-.wkv{font-size:10px;color:var(--text2)}
-#edit{display:none;margin-top:4px}
-.edrow{display:flex;align-items:center;gap:8px;padding:8px 2px;font-size:14px;color:var(--text2)}
-.edrow input{width:80px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--card);color:var(--text);font-size:15px;text-align:right}
-.toast{position:fixed;left:50%;bottom:32px;transform:translateX(-50%) translateY(20px);background:var(--text);color:var(--bg);padding:8px 16px;border-radius:20px;font-size:13px;font-weight:600;opacity:0;transition:.2s;pointer-events:none}
-.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
-.hrow{display:flex;align-items:baseline;justify-content:space-between;gap:8px;padding:10px 2px;border-bottom:1px solid var(--border);font-size:14px}
-.hrow:last-child{border-bottom:none}
-.hr-l{color:var(--text2)}
-.hr-v{font-weight:700;font-size:15px}
-.hr-s{font-size:11px;color:var(--text3);display:block}
-.hempty{font-size:13px;color:var(--text3);padding:8px 2px}
-</style>
+<link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
-<div class="hdr">
-  <div>
-    <div class="lbl" id="wrange"></div>
-    <div class="big num"><span id="wkTotal">0</span> <small>kcal this week</small></div>
+<!-- Sign-in / account creation. Shown until a valid session exists. -->
+<div class="auth-view" id="authView">
+  <form class="auth-card" id="authForm" autocomplete="off">
+    <h1 class="auth-title">Drink Calories</h1>
+    <p class="auth-sub">Sign in to your private log. Accounts live on this device.</p>
+    <div class="auth-field">
+      <label for="authName">Name</label>
+      <input id="authName" type="text" required maxlength="24" placeholder="e.g. Ted">
+    </div>
+    <div class="auth-field">
+      <label for="authPassword">Password</label>
+      <input id="authPassword" type="password" required maxlength="64" placeholder="At least 4 characters">
+    </div>
+    <div class="auth-actions">
+      <button type="submit" class="auth-btn primary">Sign in</button>
+      <button type="button" class="auth-btn ghost" id="authCreate">Create account</button>
+    </div>
+    <p class="auth-error" id="authError"></p>
+    <p class="auth-note">Passwords are stored as a hash on this device only. There is no password recovery — if you forget it, that account's log is unrecoverable.</p>
+  </form>
+</div>
+
+<main>
+  <div class="hdr">
+    <div class="hdr-main">
+      <div class="lbl" id="wrange"></div>
+      <div class="big num"><span id="wkTotal">0</span> <small>kcal this week</small></div>
+    </div>
+    <span class="user-chip" id="userChip" title="Signed in as"></span>
+    <div class="hdr-actions">
+      <button class="ibtn" id="lockBtn" title="Lock / switch user">&#128274;</button>
+      <button class="ibtn" id="clearDay" title="Clear selected day">&#128465;</button>
+      <button class="ibtn" id="gearBtn" title="Edit calories per serving">&#9881;</button>
+    </div>
   </div>
-  <div style="display:flex;gap:8px">
-    <button class="ibtn" id="clearDay" title="Clear day">&#128465;</button>
-    <button class="ibtn" id="gearBtn" title="Edit calories">&#9881;</button>
+
+  <div class="sec">CALORIES PER SERVING (tap gear to edit)</div>
+  <div id="edit"></div>
+
+  <input id="drinkFilter" class="filter" type="search" placeholder="Filter drinks — e.g. wusu, 珠江, wheat…" autocomplete="off">
+
+  <div class="days" id="days"></div>
+  <div id="rows"></div>
+
+  <div class="totalbar">
+    <span class="t" id="dayLbl"></span>
+    <span class="v num"><span id="dayTotal">0</span> kcal</span>
   </div>
-</div>
 
-<div class="days" id="days"></div>
-<div id="rows"></div>
+  <div class="sec">THIS WEEK BY DAY</div>
+  <div class="wk" id="wk"></div>
 
-<div class="totalbar">
-  <span class="t" id="dayLbl"></span>
-  <span class="v num"><span id="dayTotal">0</span> kcal</span>
-</div>
-
-<div class="sec">THIS WEEK BY DAY</div>
-<div class="wk" id="wk"></div>
-
-<div class="sec">CALORIES PER SERVING</div>
-<div id="edit"></div>
-
-<div class="sec" style="display:flex;justify-content:space-between;align-items:center">PAST WEEKS
-  <button class="ibtn" id="clearHist" title="Clear history" style="width:32px;height:32px">&#128465;</button>
-</div>
-<div id="hist"></div>
+  <div class="sec">PAST WEEKS</div>
+  <div id="hist"></div>
+</main>
 
 <div class="toast" id="toast"></div>
 
-<script>
-(function(){
-var CATS=[
- {n:"Standard beer", s:"500 ml",        k:215, c:"var(--c1)"},
- {n:"Qingdao beer",  s:"500 ml",        k:195, c:"var(--c3)"},
- {n:"Light beer",    s:"500 ml",        k:150, c:"var(--c4)"},
- {n:"Vodka / whisky",s:"1 shot · 45 ml",k:100, c:"var(--c5)"},
- {n:"Wine",          s:"1 glass · 150 ml",k:125,c:"var(--c6)"}
-];
-function monday(d){var x=new Date(d);x.setDate(x.getDate()-((x.getDay()+6)%7));x.setHours(0,0,0,0);return x}
-var MON=monday(new Date());
-function fmt(d){return d.getDate()+"/"+(d.getMonth()+1)}
-document.getElementById('wrange').textContent="Week "+fmt(MON)+" – "+fmt(new Date(MON.getTime()+6*864e5));
-var DAYS=[];for(var i=0;i<7;i++)DAYS.push(new Date(MON.getTime()+i*864e5));
-var DN=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
-var KEY='alctrack.v1',state;
-try{state=JSON.parse(localStorage.getItem(KEY))}catch(e){}
-if(!state||!state.c||state.c.length!==7){state={c:[]};for(var i=0;i<7;i++)state.c.push([0,0,0,0,0])}
-if(!state.k){state.k=CATS.map(function(c){return c.k})}
-if(!state.hist){state.hist={}}
-for(var i=0;i<7;i++){if(state.c[i]&&state.c[i].length===6){state.c[i].splice(1,1)}}
-if(state.k.length===6){state.k.splice(1,1);save()}
-for(var key in state.hist){var e=state.hist[key];
- if(e.drinks&&e.drinks.length===6){e.drinks.splice(1,1)}
- if(e.k&&e.k.length===6){e.k.splice(1,1)}}
-var wkKey=MON.getFullYear()+'-'+String(MON.getMonth()+1).padStart(2,'0')+'-'+String(MON.getDate()).padStart(2,'0');
-if(state.weekKey!==wkKey){
-  if(state.weekKey){
-    var hasAny=false,drinks=[0,0,0,0,0];
-    for(var i=0;i<7;i++)for(var j=0;j<5;j++){drinks[j]+=state.c[i][j];if(state.c[i][j])hasAny=true}
-    if(hasAny&&!state.hist[state.weekKey]){
-      state.hist[state.weekKey]={drinks:drinks,k:state.k.slice()};
-    }
-  }
-  state.c=[];for(var i=0;i<7;i++)state.c.push([0,0,0,0,0]);
-  state.weekKey=wkKey;
-  save();
-}
-var sel=(new Date().getDay()+6)%7;
-function save(){try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){}}
-function dTot(i){var t=0;for(var j=0;j<5;j++)t+=state.c[i][j]*state.k[j];return t}
-function wTot(){var t=0;for(var i=0;i<7;i++)t+=dTot(i);return t}
-function toast(m){var t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(function(){t.classList.remove('show')},1400)}
-function render(){
- var dh=document.getElementById('days');dh.innerHTML='';
- for(var i=0;i<7;i++){var b=document.createElement('button');b.className='day'+(i===sel?' sel':'');
-  b.innerHTML='<span class="d">'+DN[i]+'</span><span class="n num">'+DAYS[i].getDate()+'</span><span class="k num">'+(dTot(i)?dTot(i):'')+'</span>';
-  (function(i){b.onclick=function(){sel=i;render()}})(i);dh.appendChild(b)}
- var rh=document.getElementById('rows');rh.innerHTML='';
- for(var j=0;j<5;j++){(function(j){
-  var r=document.createElement('div');r.className='row';
-  r.innerHTML='<span class="dot" style="background:'+CATS[j].c+'"></span>'
-   +'<div class="info"><div class="name">'+CATS[j].n+'</div><div class="serv num">'+CATS[j].s+' · '+state.k[j]+' kcal</div></div>'
-   +'<div class="ctl"><button class="cbtn"'+(state.c[sel][j]?'':' disabled')+'>−</button><span class="cnt num">'+state.c[sel][j]+'</span><button class="cbtn">+</button></div>';
-  var bs=r.querySelectorAll('.cbtn');
-  bs[0].onclick=function(){if(state.c[sel][j]>0){state.c[sel][j]--;save();render()}};
-  bs[1].onclick=function(){state.c[sel][j]++;save();render()};
-  rh.appendChild(r)})(j)}
- document.getElementById('dayTotal').textContent=dTot(sel);
- var today=(new Date().getDay()+6)%7;
- document.getElementById('dayLbl').textContent=DN[sel]+' '+fmt(DAYS[sel])+(sel===today?' · today':'');
- document.getElementById('wkTotal').textContent=wTot();
- var wh=document.getElementById('wk');wh.innerHTML='';
- var mx=0;for(var i=0;i<7;i++)mx=Math.max(mx,dTot(i));
- for(var i=0;i<7;i++){var v=dTot(i),h=mx?Math.max(3,Math.round(v/mx*76)):3;
-  var c=document.createElement('div');c.className='wkc'+(i===today?' today':'');
-  c.innerHTML='<span class="wkv num">'+(v||'')+'</span><div class="bar" style="height:'+h+'px"></div><span class="wkl">'+DN[i][0]+'</span>';
-  wh.appendChild(c)}
- renderHist();
-}
-function renderHist(){
- var h=document.getElementById('hist');h.innerHTML='';
- var keys=Object.keys(state.hist).filter(function(k){return k!==state.weekKey}).sort().reverse();
- if(!keys.length){h.innerHTML='<div class="hempty">No finished weeks yet — each week is saved automatically when a new one starts.</div>';return}
- for(var i=0;i<keys.length;i++){(function(k){
-  var e=state.hist[k],tot=0;
-  for(var j=0;j<5;j++)tot+=e.drinks[j]*e.k[j];
-  var d=new Date(k+'T00:00:00'),end=new Date(d.getTime()+6*864e5);
-  var r=document.createElement('div');r.className='hrow';
-  r.innerHTML='<span class="hr-l num">'+fmt(d)+' – '+fmt(end)+'<span class="hr-s num">avg '+Math.round(tot/7)+' kcal/day</span></span><span class="hr-v num">'+tot+' kcal</span>';
-  h.appendChild(r)})(keys[i])}
-}
-document.getElementById('clearHist').onclick=function(){
- if(!Object.keys(state.hist).length)return;
- if(confirm('Delete all past-week history?')){state.hist={};save();render();toast('History cleared')}};
-document.getElementById('clearDay').onclick=function(){
- if(state.c[sel].every(function(v){return v===0}))return;
- if(confirm('Clear all drinks for '+DN[sel]+'?')){for(var j=0;j<5;j++)state.c[sel][j]=0;save();render();toast('Day cleared')}};
-var ed=document.getElementById('edit'),gb=document.getElementById('gearBtn');
-CATS.forEach(function(c,j){
- var r=document.createElement('div');r.className='edrow';
- r.innerHTML='<span style="flex:1">'+c.n+' <span class="serv num">('+c.s+')</span></span><input type="number" inputmode="numeric" min="0" step="5" value="'+state.k[j]+'"><span class="serv">kcal</span>';
- r.querySelector('input').onchange=function(e){
-  var v=Math.round(parseFloat(e.target.value));
-  if(!isNaN(v)&&v>=0&&v<=2000){state.k[j]=v;save();render();toast(c.n+': '+v+' kcal')}
-  else{e.target.value=state.k[j]}};
- ed.appendChild(r)});
-gb.onclick=function(){ed.style.display=ed.style.display==='block'?'none':'block'};
-render();
-})();
-</script>
+<script type="module" src="js/app.js"></script>
 </body>
 </html>

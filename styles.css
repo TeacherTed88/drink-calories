@@ -1,0 +1,159 @@
+/* Drink Calories — presentation only. All colors via custom properties so the
+   dark/light flip is a single media query. */
+:root {
+  --bg: #0b0b0f; --card: #17171d; --border: #2a2a33;
+  --text: #f2f2f5; --text2: #b9b9c4; --text3: #8a8a96;
+  --accent: #5b8cff;
+  --c1: #5b8cff; --c2: #e5604d; --c3: #4caf7d; --c4: #9b6ee8; --c5: #8a8a96; --c6: #c9a04e;
+}
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #f6f6f8; --card: #ffffff; --border: #e2e2e8;
+    --text: #17171d; --text2: #55555f; --text3: #8a8a96;
+  }
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; padding: 0; }
+body {
+  background: var(--bg); color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Noto Sans SC", sans-serif;
+  font-size: 16px; line-height: 1.45;
+  max-width: 480px; margin: 0 auto;
+  padding: 16px 14px calc(24px + env(safe-area-inset-bottom));
+}
+button { font: inherit; color: inherit; }
+.num { font-variant-numeric: tabular-nums; }
+
+/* ------------------------------- header ------------------------------- */
+.hdr { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
+.hdr-main { flex: 1; min-width: 0; }
+.lbl { font-size: 12px; color: var(--text3); }
+.big { font-size: 36px; font-weight: 700; line-height: 1.1; }
+.big small { font-size: 14px; font-weight: 400; color: var(--text3); }
+.hdr-actions { display: flex; gap: 8px; }
+.ibtn {
+  width: 40px; height: 40px; border-radius: 10px; border: 1px solid var(--border);
+  background: var(--card); display: flex; align-items: center; justify-content: center;
+  cursor: pointer; flex-shrink: 0;
+}
+.ibtn:active { transform: scale(.95); }
+.user-chip {
+  max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  border: 1px solid var(--border); border-radius: 20px; background: var(--card);
+  padding: 8px 14px; font-size: 14px; font-weight: 600;
+}
+
+/* ------------------------------ search box ---------------------------- */
+.filter {
+  width: 100%; padding: 10px 14px; margin-bottom: 10px;
+  border: 1px solid var(--border); border-radius: 12px;
+  background: var(--card); color: var(--text); font-size: 15px;
+}
+
+/* ------------------------------ day strip ----------------------------- */
+.days { display: flex; gap: 4px; margin-bottom: 12px; }
+.day {
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 1px;
+  padding: 8px 0; border: 1px solid var(--border); border-radius: 12px;
+  background: var(--card); cursor: pointer;
+}
+.day .d { font-size: 11px; color: var(--text3); }
+.day .n { font-size: 16px; font-weight: 600; }
+.day .k { font-size: 10px; color: var(--text3); min-height: 13px; }
+.day.sel { background: var(--text); border-color: var(--text); }
+.day.sel .d, .day.sel .n, .day.sel .k { color: var(--bg); }
+
+/* ------------------------------ drink rows ---------------------------- */
+.row {
+  display: flex; align-items: center; gap: 8px; padding: 10px 12px;
+  background: var(--card); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 8px;
+}
+.dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+.info { flex: 1; min-width: 0; }
+.name { font-size: 15px; font-weight: 600; }
+.serv { font-size: 12px; color: var(--text3); }
+.ctl { display: flex; align-items: center; gap: 6px; }
+.cbtn {
+  width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--border);
+  background: transparent; display: flex; align-items: center; justify-content: center;
+  font-size: 18px; cursor: pointer; user-select: none;
+}
+.cbtn:active { background: var(--border); }
+.cbtn:disabled { opacity: .25; }
+.cnt { width: 28px; text-align: center; font-size: 16px; font-weight: 700; }
+
+/* --------------------------- totals & charts --------------------------- */
+.totalbar {
+  display: flex; align-items: baseline; justify-content: space-between;
+  padding: 14px 16px; border-radius: 12px;
+  background: var(--card); border: 1px solid var(--border); margin: 12px 0;
+}
+.totalbar .t { font-size: 13px; color: var(--text2); }
+.totalbar .v { font-size: 26px; font-weight: 700; }
+.sec {
+  font-size: 12px; color: var(--text3); margin: 18px 2px 8px;
+  font-weight: 600; letter-spacing: .02em;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.wk { display: flex; gap: 6px; align-items: flex-end; height: 110px; padding: 2px 0; }
+.wkc { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; height: 100%; justify-content: flex-end; }
+.bar { width: 70%; border-radius: 4px 4px 0 0; background: var(--accent); }
+.wkc.today .bar { background: var(--text); }
+.wkl { font-size: 10px; color: var(--text3); }
+.wkv { font-size: 10px; color: var(--text2); }
+
+/* -------------------------------- history ------------------------------ */
+.hrow {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
+  padding: 10px 2px; border-bottom: 1px solid var(--border); font-size: 14px;
+}
+.hrow:last-child { border-bottom: none; }
+.hr-l { color: var(--text2); }
+.hr-v { font-weight: 700; font-size: 15px; }
+.hr-s { font-size: 11px; color: var(--text3); display: block; }
+.hempty { font-size: 13px; color: var(--text3); padding: 8px 2px; }
+
+/* ----------------------------- kcal editor ----------------------------- */
+#edit { display: none; margin-top: 4px; }
+.edrow { display: flex; align-items: center; gap: 8px; padding: 8px 2px; font-size: 14px; color: var(--text2); }
+.edrow input {
+  width: 80px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px;
+  background: var(--card); color: var(--text); font-size: 15px; text-align: right;
+}
+
+/* -------------------------------- toast -------------------------------- */
+.toast {
+  position: fixed; left: 50%; bottom: 32px; transform: translateX(-50%) translateY(20px);
+  background: var(--text); color: var(--bg); padding: 8px 16px; border-radius: 20px;
+  font-size: 13px; font-weight: 600; opacity: 0; transition: .2s; pointer-events: none;
+  z-index: 20;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ------------------------------ auth screen ---------------------------- */
+.auth-view {
+  position: fixed; inset: 0; z-index: 10; background: var(--bg);
+  display: none; flex-direction: column; align-items: center; justify-content: center;
+  padding: 24px; max-width: 480px; margin: 0 auto;
+}
+.auth-card {
+  width: 100%; max-width: 360px; background: var(--card);
+  border: 1px solid var(--border); border-radius: 16px; padding: 24px;
+}
+.auth-title { font-size: 22px; font-weight: 700; margin: 0 0 4px; }
+.auth-sub { font-size: 13px; color: var(--text3); margin: 0 0 20px; }
+.auth-field { margin-bottom: 14px; }
+.auth-field label { display: block; font-size: 12px; color: var(--text3); margin-bottom: 6px; font-weight: 600; }
+.auth-field input {
+  width: 100%; padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px;
+  background: var(--bg); color: var(--text); font-size: 16px;
+}
+.auth-actions { display: flex; gap: 10px; margin-top: 20px; }
+.auth-btn {
+  flex: 1; padding: 12px; border-radius: 10px; border: none; cursor: pointer;
+  font-weight: 700; font-size: 15px;
+}
+.auth-btn.primary { background: var(--accent); color: #fff; }
+.auth-btn.ghost { background: transparent; border: 1px solid var(--border); color: var(--text2); }
+.auth-error { color: #e5604d; font-size: 13px; min-height: 18px; margin-top: 12px; }
+.auth-note { font-size: 11px; color: var(--text3); margin-top: 16px; line-height: 1.5; }
