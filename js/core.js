@@ -69,7 +69,7 @@ function drinkTotals(week) {
 export function rolloverWeek(data, todayKey) {
   if (data.weekKey === todayKey) return data;
   const next = {
-    ...data,
+    ...data, // keeps kcal, myDrinks, anything future fields add
     hist: { ...data.hist },
     week: emptyWeek(data.week[0].length),
     weekKey: todayKey,
@@ -78,6 +78,18 @@ export function rolloverWeek(data, todayKey) {
     next.hist[data.weekKey] = { drinks: drinkTotals(data.week), kcal: [...data.kcal] };
   }
   return next;
+}
+
+/** Total lifetime taps per drink (current week + archived weeks) — drives the
+ *  "your regulars float to the top" ordering of the personal list. */
+export function drinkFrequency(data, drinkCount) {
+  const totals = Array(drinkCount).fill(0);
+  const accumulate = (counts) => counts.forEach((count, j) => {
+    if (j < drinkCount) totals[j] += count || 0;
+  });
+  data.week.forEach(accumulate);
+  Object.values(data.hist).forEach((entry) => accumulate(entry.drinks || []));
+  return totals;
 }
 
 /**

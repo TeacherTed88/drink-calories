@@ -5,7 +5,7 @@
  * (≤7×19 numbers), so simplicity wins over surgical DOM updates.
  */
 
-import { DAY_NAMES, dayTotal, weekTotal } from './core.js';
+import { DAY_NAMES, dayTotal, weekTotal, drinkFrequency } from './core.js';
 
 const MS_PER_DAY = 864e5;
 
@@ -33,6 +33,16 @@ function createCounter(value, onMinus, onPlus) {
 export function createUI(actions) {
   const $ = (id) => document.getElementById(id);
   let lastView = null; // remembered so the search box can re-render on its own
+  let listEditMode = false; // reveals remove-buttons on the personal list
+  const collapsedGroups = new Set(); // catalog folders start expanded; user collapses
+
+  const GROUP_LABELS = {
+    china: 'Chinese beers 中国啤酒',
+    import: 'Imports 进口啤酒',
+    usa: 'American beers',
+    canada: 'Canadian beers',
+    spirits: 'Spirits & wine',
+  };
 
   /* ------------------------------ toast ------------------------------ */
   let toastTimer = null;
@@ -87,36 +97,93 @@ export function createUI(actions) {
     });
   }
 
-  function renderDrinkRows(drinks, data, selectedDay, onIncrement, onDecrement, filterText) {
+  function drinkRowShell(drink, extraClass = '') {
+    const row = el('div', 'row ' + extraClass);
+    row.append(el('span', 'dot', ''));
+    row.querySelector('.dot').style.background = `var(${drink.color})`;
+    const info = el('div', 'info');
+    info.append(el('div', 'name', drink.name));
+    return { row, info };
+  }
+
+  /** Personal shortlist — counters; sorted by real consumption so regulars stay on top. */
+  function renderPersonalList(drinks, data, selectedDay, onIncrement, onDecrement, filterText, actions) {
     const host = $('rows');
     host.innerHTML = '';
     const term = filterText.trim().toLowerCase();
-    const visible = drinks
-      .map((drink, index) => ({ drink, index }))
-      .filter(({ drink }) => !term || drink.name.toLowerCase().includes(term));
-    if (visible.length === 0) {
-      host.append(el('div', 'hempty', `No drinks match "${filterText}"`));
+    const freq = drinkFrequency(data, drinks.length);
+    const mine = data.myDrinks
+      .filter((j) => j < drinks.length)
+      .filter((j) => !term || drinks[j].name.toLowerCase().includes(term))
+      .sort((a, b) => (freq[b] - freq[a]) || (data.myDrinks.indexOf(a) - data.myDrinks.indexOf(b)));
+
+    if (mine.length === 0) {
+      host.append(el('div', 'hempty',
+        term ? `No drinks in your list match "${filterText}"` : 'Your list is empty — add beers from the catalog below.'));
       return;
     }
-    visible.forEach(({ drink, index: j }) => {
-      const row = el('div', 'row');
-      const info = el('div', 'info');
-      info.append(
-        el('div', 'name', drink.name),
-        el('div', 'serv num', `${drink.serving} · ${data.kcal[j]} kcal`)
-      );
-      row.append(
-        el('span', 'dot', ''),
-        info,
-        createCounter(
-          data.week[selectedDay][j],
-          () => onDecrement(j),
-          () => onIncrement(j)
-        )
-      );
-      row.querySelector('.dot').style.background = `var(${drink.color})`;
+
+    for (const j of mine) {
+      const { row, info } = drinkRowShell(drinks[j]);
+      info.append(el('div', 'serv num', `${drinks[j].serving} · ${data.kcal[j]} kcal`));
+      const ctl = el('div', 'ctl');
+      if (listEditMode) {
+        const rm = el('button', 'cbtn rm', '✕');
+        rm.title = 'Remove from your list (logged calories are kept)';
+        rm.onclick = () => actions.onRemoveFromMine(j);
+        ctl.append(rm);
+      }
+      ctl.append(createCounter(
+        data.week[selectedDay][j],
+        () => onDecrement(j),
+        () => onIncrement(j)
+      ));
+      row.append(info, ctl);
       host.append(row);
-    });
+    }
+  }
+
+  /** Master catalog, grouped into collapsible folders; tap ＋ to pin to your list. */
+  function renderCatalog(drinks, data, filterText, actions) {
+    const host = $('catalog');
+    host.innerHTML = '';
+    const term = filterText.trim().toLowerCase();
+    const groups = [...new Set(drinks.map((d) => d.group))];
+
+    for (const group of groups) {
+      const members = drinks
+        .map((drink, index) => ({ drink, index }))
+        .filter(({ drink, index }) =>
+          drink.group === group &&
+          !data.myDrinks.includes(index) &&
+          (!term || drink.name.toLowerCase().includes(term)));
+      if (members.length === 0) continue;
+
+      const isCollapsed = !term && collapsedGroups.has(group);
+      const head = el('button', 'cat-head', '');
+      head.innerHTML = `<span class="cat-arrow">${isCollapsed ? '▸' : '▾'}</span> ` +
+        (GROUP_LABELS[group] || group) + ` <span class="cat-count">${members.length}</span>`;
+      head.onclick = () => {
+        if (collapsedGroups.has(group)) collapsedGroups.delete(group);
+        else collapsedGroups.add(group);
+        if (lastView) render(lastView);
+      };
+      host.append(head);
+
+      if (isCollapsed) continue;
+      for (const { drink, index: j } of members) {
+        const { row, info } = drinkRowShell(drinks[j]);
+        info.append(el('div', 'serv num', `${drink.serving} · ${data.kcal[j]} kcal`));
+        const add = el('button', 'addbtn', '＋ Add');
+        add.onclick = () => actions.onAddToMine(j);
+        row.append(info, add);
+        host.append(row);
+      }
+    }
+
+    if (host.querySelectorAll('.row').length === 0) {
+      host.append(el('div', 'hempty', term ? `No catalog drinks match "${filterText}"` : 'Everything is already in your list.'));
+    }
   }
 
   function renderWeekChart(data, selectedDay) {
@@ -197,7 +264,9 @@ export function createUI(actions) {
       (selectedDay === todayIdx ? ' · today' : '');
 
     renderDays(data, weekDates, selectedDay, actions.onSelectDay);
-    renderDrinkRows(drinks, data, selectedDay, actions.onIncrement, actions.onDecrement, filterText);
+    renderPersonalList(drinks, data, selectedDay, actions.onIncrement, actions.onDecrement, filterText, actions);
+    renderCatalog(drinks, data, filterText, actions);
+    $('editListBtn').textContent = listEditMode ? 'Done' : 'Edit';
     renderWeekChart(data, selectedDay);
     renderHistory(data, data.weekKey);
     renderKcalEditor(drinks, data, actions.onUpdateKcal);
@@ -207,8 +276,13 @@ export function createUI(actions) {
   function bind() {
     bindAuth();
     $('drinkFilter').oninput = () => { if (lastView) render(lastView); };
+    $('editListBtn').onclick = () => {
+      listEditMode = !listEditMode;
+      if (lastView) render(lastView);
+    };
     $('clearDay').onclick = actions.onClearDay;
     $('lockBtn').onclick = actions.onLock;
+    $('userChip').onclick = actions.onLock; // tapping your name signs out too
     let editorOpen = false;
     $('gearBtn').onclick = () => {
       editorOpen = !editorOpen;

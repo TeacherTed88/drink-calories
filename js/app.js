@@ -6,7 +6,7 @@
 
 import { DRINKS } from './drinks.js';
 import {
-  DAY_NAMES, weekKeyOf, createEmptyData, rolloverWeek, migrateLegacy,
+  DAY_NAMES, weekKeyOf, createEmptyData, rolloverWeek, migrateLegacy, drinkFrequency,
 } from './core.js';
 import {
   loadRegistry, saveRegistry, loadUserData, saveUserData,
@@ -17,6 +17,8 @@ import { createUI } from './ui.js';
 
 const MS_PER_DAY = 864e5;
 const DEFAULT_KCAL = DRINKS.map((drink) => drink.kcal);
+/** New accounts start with the essentials: standard, Qingdao, Asahi, vodka, wine. */
+const DEFAULT_MY_DRINKS = [0, 1, 15, 21, 22];
 
 /**
  * Session-scoped app state. `data` is the persisted per-user log;
@@ -60,6 +62,10 @@ function loadUserLog(user) {
       }
     }
   }
+  // Personal shortlist came in after v3 launched — backfill for existing logs.
+  if (!Array.isArray(loaded.myDrinks) || loaded.myDrinks.length === 0) {
+    loaded.myDrinks = [...DEFAULT_MY_DRINKS];
+  }
   // Archive the previous week if the calendar has moved on since last visit.
   data = rolloverWeek(loaded, weekKeyOf(new Date()));
   persist();
@@ -95,6 +101,19 @@ const ui = createUI({
     persist();
     refresh();
     ui.toast('Day cleared');
+  },
+  onAddToMine: (drinkIndex) => {
+    if (data.myDrinks.includes(drinkIndex)) return;
+    data.myDrinks.unshift(drinkIndex); // new additions surface near the top
+    persist();
+    refresh();
+    ui.toast(`${DRINKS[drinkIndex].name} added to your list`);
+  },
+  onRemoveFromMine: (drinkIndex) => {
+    data.myDrinks = data.myDrinks.filter((j) => j !== drinkIndex);
+    persist();
+    refresh();
+    ui.toast('Removed — it stays in the catalog below');
   },
   onUpdateKcal: (drinkIndex, value) => {
     data.kcal[drinkIndex] = value;

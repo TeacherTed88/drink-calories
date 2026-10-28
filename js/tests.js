@@ -3,7 +3,7 @@
  * Open tests.html on the deployed site (https required for crypto.subtle).
  */
 
-import { mondayOf, weekKeyOf, createEmptyData, dayTotal, weekTotal, rolloverWeek, migrateLegacy }
+import { mondayOf, weekKeyOf, createEmptyData, dayTotal, weekTotal, rolloverWeek, migrateLegacy, drinkFrequency }
   from './core.js';
 import { hashCredentials } from './auth.js';
 
@@ -32,6 +32,22 @@ test('dayTotal / weekTotal multiply counts by kcal', () => {
   const kcal = [100, 200];
   assertEqual(dayTotal([2, 1], kcal), 400, 'dayTotal');
   assertEqual(weekTotal([[1, 0], [0, 2], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0]], kcal), 500, 'weekTotal');
+});
+
+test('drinkFrequency sums current week + history', () => {
+  const data = createEmptyData(3, [100, 200, 300]);
+  data.week[0][1] = 2;
+  data.hist['2026-10-12'] = { drinks: [0, 3, 0], kcal: [100, 200, 300] };
+  assertEqual(drinkFrequency(data, 3), [0, 5, 0]);
+});
+
+test('rolloverWeek preserves myDrinks shortlist', () => {
+  const data = createEmptyData(3, [100, 200, 300]);
+  data.weekKey = '2026-10-19';
+  data.week[0][0] = 1;
+  data.myDrinks = [2, 0];
+  const rolled = rolloverWeek(data, '2026-10-26');
+  assertEqual(rolled.myDrinks, [2, 0]);
 });
 
 test('rolloverWeek archives a finished week and starts fresh', () => {
