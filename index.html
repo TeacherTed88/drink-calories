@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>Drink Calories</title>
+<title>Beermaxxing</title>
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon.svg">
@@ -18,7 +18,7 @@
 <!-- Sign-in / account creation. Shown until a valid session exists. -->
 <div class="auth-view" id="authView">
   <form class="auth-card" id="authForm" autocomplete="off">
-    <h1 class="auth-title">Drink Calories</h1>
+    <h1 class="auth-title">Beermaxxing</h1>
     <p class="auth-sub">Sign in to your private log. Accounts live on this device.</p>
     <div class="auth-field">
       <label for="authName">Name</label>
@@ -42,6 +42,7 @@
     <div class="hdr-main">
       <div class="lbl" id="wrange"></div>
       <div class="big num"><span id="wkTotal">0</span> <small>kcal this week</small></div>
+      <div class="lbl num" id="wkGrams"></div>
     </div>
     <span class="user-chip" id="userChip" title="Signed in as — tap to sign out" style="cursor:pointer"></span>
     <div class="hdr-actions">
@@ -68,7 +69,7 @@
 
   <div class="totalbar">
     <span class="t" id="dayLbl"></span>
-    <span class="v num"><span id="dayTotal">0</span> kcal</span>
+    <span class="v num"><span id="dayTotal">0</span> kcal · <span id="dayGrams">0</span> g alcohol</span>
   </div>
 
   <div class="sec">THIS WEEK BY DAY</div>

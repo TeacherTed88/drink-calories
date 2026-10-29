@@ -1,4 +1,4 @@
-# Drink Calories 🍺
+# Beermaxxing 🍺
 
 A tap-to-count alcohol calorie tracker built for Guangzhou convenience-store beer
 shelves. Static PWA — no backend, no build step, hosts free on GitHub Pages.
