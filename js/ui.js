@@ -5,7 +5,7 @@
  * (≤7×19 numbers), so simplicity wins over surgical DOM updates.
  */
 
-import { DAY_NAMES, dayTotal, weekTotal, drinkFrequency } from './core.js';
+import { DAY_NAMES, dayTotal, weekTotal, drinkFrequency, alcoholGrams } from './core.js';
 
 const MS_PER_DAY = 864e5;
 
@@ -34,15 +34,7 @@ export function createUI(actions) {
   const $ = (id) => document.getElementById(id);
   let lastView = null; // remembered so the search box can re-render on its own
   let listEditMode = false; // reveals remove-buttons on the personal list
-  const collapsedGroups = new Set(); // catalog folders start expanded; user collapses
-
-  const GROUP_LABELS = {
-    china: 'Chinese beers 中国啤酒',
-    import: 'Imports 进口啤酒',
-    usa: 'American beers',
-    canada: 'Canadian beers',
-    spirits: 'Spirits & wine',
-  };
+  let catalogPath = []; // drill-down location inside the catalog folder tree
 
   /* ------------------------------ toast ------------------------------ */
   let toastTimer = null;
@@ -106,16 +98,17 @@ export function createUI(actions) {
     return { row, info };
   }
 
-  /** Personal shortlist — counters; sorted by real consumption so regulars stay on top. */
+  /** Personal shortlist — counters; order is FROZEN at Monday's weekly reset,
+   *  so tapping drinks never shuffles the list mid-week. */
   function renderPersonalList(drinks, data, selectedDay, onIncrement, onDecrement, filterText, actions) {
     const host = $('rows');
     host.innerHTML = '';
     const term = filterText.trim().toLowerCase();
-    const freq = drinkFrequency(data, drinks.length);
-    const mine = data.myDrinks
+    const stored = Array.isArray(data.myOrder) && data.myOrder.length ? data.myOrder : data.myDrinks;
+    const mine = [...new Set(stored)] // de-dup, then append anything missing at the end
+      .concat(data.myDrinks.filter((j) => !stored.includes(j)))
       .filter((j) => j < drinks.length)
-      .filter((j) => !term || drinks[j].name.toLowerCase().includes(term))
-      .sort((a, b) => (freq[b] - freq[a]) || (data.myDrinks.indexOf(a) - data.myDrinks.indexOf(b)));
+      .filter((j) => !term || drinks[j].name.toLowerCase().includes(term));
 
     if (mine.length === 0) {
       host.append(el('div', 'hempty',
@@ -143,46 +136,98 @@ export function createUI(actions) {
     }
   }
 
-  /** Master catalog, grouped into collapsible folders; tap ＋ to pin to your list. */
+  const PATH_LABELS = {
+    china: 'Chinese beers 中国啤酒 (domestic)',
+    intl: 'International 进口',
+    asia: 'Asia',
+    'north-america': 'North America',
+    europe: 'Europe',
+    japan: 'Japan 日本',
+    thailand: 'Thailand 泰国',
+    singapore: 'Singapore',
+    philippines: 'Philippines',
+    denmark: 'Denmark',
+    netherlands: 'Netherlands',
+    germany: 'Germany',
+    france: 'France',
+    ireland: 'Ireland',
+    mexico: 'Mexico',
+    usa: 'USA',
+    canada: 'Canada (Toronto)',
+    spirits: 'Spirits & wine',
+  };
+  const pathLabel = (seg) => PATH_LABELS[seg] || seg;
+  const startsWithPath = (path, prefix) =>
+    prefix.every((seg, k) => path[k] === seg);
+
+  /** Master catalog: folder tree with drill-down. Folders render from the drink
+   *  paths alone, so adding a country = adding one drink with a new path. */
   function renderCatalog(drinks, data, filterText, actions) {
     const host = $('catalog');
     host.innerHTML = '';
     const term = filterText.trim().toLowerCase();
-    const groups = [...new Set(drinks.map((d) => d.group))];
 
-    for (const group of groups) {
-      const members = drinks
+    // Search flattens the whole tree and shows matches with their folder trail.
+    if (term) {
+      const matches = drinks
         .map((drink, index) => ({ drink, index }))
         .filter(({ drink, index }) =>
-          drink.group === group &&
           !data.myDrinks.includes(index) &&
-          (!term || drink.name.toLowerCase().includes(term)));
-      if (members.length === 0) continue;
-
-      const isCollapsed = !term && collapsedGroups.has(group);
-      const head = el('button', 'cat-head', '');
-      head.innerHTML = `<span class="cat-arrow">${isCollapsed ? '▸' : '▾'}</span> ` +
-        (GROUP_LABELS[group] || group) + ` <span class="cat-count">${members.length}</span>`;
-      head.onclick = () => {
-        if (collapsedGroups.has(group)) collapsedGroups.delete(group);
-        else collapsedGroups.add(group);
-        if (lastView) render(lastView);
-      };
-      host.append(head);
-
-      if (isCollapsed) continue;
-      for (const { drink, index: j } of members) {
+          drink.name.toLowerCase().includes(term));
+      for (const { drink, index: j } of matches) {
         const { row, info } = drinkRowShell(drinks[j]);
-        info.append(el('div', 'serv num', `${drink.serving} · ${data.kcal[j]} kcal`));
+        info.append(el('div', 'serv num',
+          `${drink.path.map(pathLabel).join(' › ')} · ${drink.serving} · ${data.kcal[j]} kcal`));
         const add = el('button', 'addbtn', '＋ Add');
         add.onclick = () => actions.onAddToMine(j);
         row.append(info, add);
         host.append(row);
       }
+      if (matches.length === 0) host.append(el('div', 'hempty', `No catalog drinks match "${filterText}"`));
+      return;
     }
 
-    if (host.querySelectorAll('.row').length === 0) {
-      host.append(el('div', 'hempty', term ? `No catalog drinks match "${filterText}"` : 'Everything is already in your list.'));
+    // Breadcrumb back-button when drilled in.
+    if (catalogPath.length > 0) {
+      const back = el('button', 'cat-head', '');
+      back.innerHTML = `<span class="cat-arrow">←</span> Back · ` +
+        catalogPath.map(pathLabel).join(' › ');
+      back.onclick = () => { catalogPath.pop(); if (lastView) render(lastView); };
+      host.append(back);
+    }
+
+    // Subfolders at this level (each shows total drinks in its subtree).
+    const childSegments = [...new Set(
+      drinks.filter((d) => startsWithPath(d.path, catalogPath) && d.path.length > catalogPath.length)
+            .map((d) => d.path[catalogPath.length]))];
+    for (const seg of childSegments) {
+      const subtree = drinks.filter((d) => startsWithPath(d.path, [...catalogPath, seg]));
+      const available = subtree.filter((d) => !data.myDrinks.includes(drinks.indexOf(d))).length;
+      if (available === 0) continue;
+      const head = el('button', 'cat-head', '');
+      head.innerHTML = `<span class="cat-arrow">▸</span> 📁 ${pathLabel(seg)} <span class="cat-count">${available}</span>`;
+      head.onclick = () => { catalogPath.push(seg); if (lastView) render(lastView); };
+      host.append(head);
+    }
+
+    // Drinks sitting directly in this folder.
+    const here = drinks
+      .map((drink, index) => ({ drink, index }))
+      .filter(({ drink, index }) =>
+        drink.path.length === catalogPath.length &&
+        startsWithPath(drink.path, catalogPath) &&
+        !data.myDrinks.includes(index));
+    for (const { drink, index: j } of here) {
+      const { row, info } = drinkRowShell(drinks[j]);
+      info.append(el('div', 'serv num', `${drink.serving} · ${data.kcal[j]} kcal`));
+      const add = el('button', 'addbtn', '＋ Add');
+      add.onclick = () => actions.onAddToMine(j);
+      row.append(info, add);
+      host.append(row);
+    }
+
+    if (host.querySelectorAll('.row, .cat-head').length === (catalogPath.length > 0 ? 1 : 0)) {
+      host.append(el('div', 'hempty', 'Everything here is already in your list.'));
     }
   }
 
@@ -203,7 +248,7 @@ export function createUI(actions) {
     });
   }
 
-  function renderHistory(data, currentWeekKey) {
+  function renderHistory(data, drinks, currentWeekKey) {
     const host = $('hist');
     host.innerHTML = '';
     const keys = Object.keys(data.hist)
@@ -217,12 +262,13 @@ export function createUI(actions) {
     for (const key of keys) {
       const entry = data.hist[key];
       const total = dayTotal(entry.drinks, entry.kcal);
+      const gramsHist = Math.round(alcoholGrams(entry.drinks, drinks.map((d) => d.grams || 0)));
       const monday = new Date(`${key}T00:00:00`);
       const sunday = new Date(monday.getTime() + 6 * MS_PER_DAY);
       const row = el('div', 'hrow');
       row.innerHTML =
         `<span class="hr-l num">${fmtDayMonth(monday)} – ${fmtDayMonth(sunday)}` +
-        `<span class="hr-s num">avg ${Math.round(total / 7)} kcal/day</span></span>` +
+        `<span class="hr-s num">avg ${Math.round(total / 7)} kcal/day · ${gramsHist} g alcohol</span></span>` +
         `<span class="hr-v num">${total} kcal</span>`;
       host.append(row);
     }
@@ -258,6 +304,12 @@ export function createUI(actions) {
       `Week ${fmtDayMonth(weekDates[0])} – ${fmtDayMonth(weekDates[6])}`;
     $('wkTotal').textContent = weekTotal(data.week, data.kcal);
     $('dayTotal').textContent = dayTotal(data.week[selectedDay], data.kcal);
+    // Secondary metric: pure alcohol (grams), shown alongside calories.
+    const grams = drinks.map((drink) => drink.grams || 0);
+    const gramsDay = Math.round(alcoholGrams(data.week[selectedDay], grams));
+    const gramsWeek = Math.round(data.week.reduce((sum, counts) => sum + alcoholGrams(counts, grams), 0));
+    $('wkGrams').textContent = `${gramsWeek} g pure alcohol this week`;
+    $('dayGrams').textContent = gramsDay;
     const todayIdx = (new Date().getDay() + 6) % 7;
     $('dayLbl').textContent =
       `${DAY_NAMES[selectedDay]} ${fmtDayMonth(weekDates[selectedDay])}` +
@@ -268,7 +320,7 @@ export function createUI(actions) {
     renderCatalog(drinks, data, filterText, actions);
     $('editListBtn').textContent = listEditMode ? 'Done' : 'Edit';
     renderWeekChart(data, selectedDay);
-    renderHistory(data, data.weekKey);
+    renderHistory(data, drinks, data.weekKey);
     renderKcalEditor(drinks, data, actions.onUpdateKcal);
   }
 

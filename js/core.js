@@ -12,6 +12,7 @@ const LEGACY_COLUMN_MAPS = {
   5: [0, 1, 20, 21, 22],                 // v1: std, qingdao, light, vodka, wine
   19: [...Array(16).keys(), 20, 21, 22], // v2: 16 beers, then light/vodka/wine
   23: [...Array(23).keys()],             // v3 modular app, pre-Meiyijai-shelf list
+  58: [...Array(58).keys()],             // v3 + Meiyijia shelf; new drinks appended at 58+
 };
 
 const pad2 = (n) => String(n).padStart(2, '0');
@@ -77,6 +78,13 @@ export function rolloverWeek(data, todayKey) {
   if (data.weekKey && weekHasEntries(data.week)) {
     next.hist[data.weekKey] = { drinks: drinkTotals(data.week), kcal: [...data.kcal] };
   }
+  // The personal-list order is computed ONCE per week, here, from the week
+  // that just ended — mid-week taps never reshuffle the list (user request).
+  const width = data.week[0].length;
+  const personal = Array.isArray(data.myDrinks) && data.myDrinks.length
+    ? data.myDrinks
+    : (Array.isArray(data.myOrder) ? data.myOrder : []);
+  next.myOrder = orderByFrequency(personal, drinkFrequency(data, width));
   return next;
 }
 
@@ -90,6 +98,22 @@ export function drinkFrequency(data, drinkCount) {
   data.week.forEach(accumulate);
   Object.values(data.hist).forEach((entry) => accumulate(entry.drinks || []));
   return totals;
+}
+
+/** Total servings of one drink logged across the current week. */
+export function drinkCountThisWeek(week, drinkIndex) {
+  return week.reduce((sum, day) => sum + (day[drinkIndex] || 0), 0);
+}
+
+/** Pure alcohol in grams for one day (or any counts row): count × per-serving grams. */
+export function alcoholGrams(counts, grams) {
+  return counts.reduce((sum, count, j) => sum + count * (grams[j] || 0), 0);
+}
+
+/** Stable sort of drink indexes by consumption, highest first. Ties keep the
+ *  caller's original order so nothing visually jumps without a reason. */
+export function orderByFrequency(indexes, freq) {
+  return [...indexes].sort((a, b) => (freq[b] - freq[a]) || (indexes.indexOf(a) - indexes.indexOf(b)));
 }
 
 /**
@@ -130,6 +154,14 @@ export function migrateLegacy(raw, drinkCount, defaultKcal) {
       drinks[targetOf(j)] = entry.drinks[j] || 0;
     }
     data.hist[key] = { drinks, kcal: data.kcal.slice() };
+  }
+  // Carry the personal shortlist through migration (indexes stay valid: new
+  // drinks are appended). Missing in legacy payloads — the app backfills.
+  if (Array.isArray(raw.myDrinks)) {
+    data.myDrinks = raw.myDrinks.filter((j) => j < drinkCount);
+  }
+  if (Array.isArray(raw.myOrder)) {
+    data.myOrder = raw.myOrder.filter((j) => j < drinkCount);
   }
   return data;
 }

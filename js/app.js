@@ -6,7 +6,8 @@
 
 import { DRINKS } from './drinks.js';
 import {
-  DAY_NAMES, weekKeyOf, createEmptyData, rolloverWeek, migrateLegacy, drinkFrequency,
+  DAY_NAMES, weekKeyOf, createEmptyData, rolloverWeek, migrateLegacy,
+  drinkFrequency, orderByFrequency, drinkCountThisWeek,
 } from './core.js';
 import {
   loadRegistry, saveRegistry, loadUserData, saveUserData,
@@ -66,6 +67,11 @@ function loadUserLog(user) {
   if (!Array.isArray(loaded.myDrinks) || loaded.myDrinks.length === 0) {
     loaded.myDrinks = [...DEFAULT_MY_DRINKS];
   }
+  // List order freezes weekly (computed at Monday rollover). Older logs have
+  // no stored order yet — compute one now from their history and freeze it.
+  if (!Array.isArray(loaded.myOrder) || loaded.myOrder.length === 0) {
+    loaded.myOrder = orderByFrequency(loaded.myDrinks, drinkFrequency(loaded, DRINKS.length));
+  }
   // Archive the previous week if the calendar has moved on since last visit.
   data = rolloverWeek(loaded, weekKeyOf(new Date()));
   persist();
@@ -104,16 +110,36 @@ const ui = createUI({
   },
   onAddToMine: (drinkIndex) => {
     if (data.myDrinks.includes(drinkIndex)) return;
-    data.myDrinks.unshift(drinkIndex); // new additions surface near the top
+    data.myDrinks.unshift(drinkIndex); // membership
+    data.myOrder.unshift(drinkIndex);   // position: new items surface at top mid-week
     persist();
     refresh();
     ui.toast(`${DRINKS[drinkIndex].name} added to your list`);
   },
   onRemoveFromMine: (drinkIndex) => {
+    // Guard-rail: a drink with logged servings this week can't silently leave
+    // the list — the user must confirm dropping its calories too. Archived
+    // past weeks are never touched.
+    const loggedThisWeek = drinkCountThisWeek(data.week, drinkIndex);
+    if (loggedThisWeek > 0) {
+      const confirmed = confirm(
+        `You've logged ${loggedThisWeek} × ${DRINKS[drinkIndex].name} this week.\n\n` +
+        'Remove them too? Their calories will be subtracted from this week.'
+      );
+      if (!confirmed) return;
+      data.week = data.week.map((day) => {
+        const cleared = [...day];
+        cleared[drinkIndex] = 0;
+        return cleared;
+      });
+    }
     data.myDrinks = data.myDrinks.filter((j) => j !== drinkIndex);
+    data.myOrder = data.myOrder.filter((j) => j !== drinkIndex);
     persist();
     refresh();
-    ui.toast('Removed — it stays in the catalog below');
+    ui.toast(loggedThisWeek > 0
+      ? 'Removed, with its logged drinks'
+      : 'Removed — it stays in the catalog below');
   },
   onUpdateKcal: (drinkIndex, value) => {
     data.kcal[drinkIndex] = value;
