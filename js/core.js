@@ -100,6 +100,21 @@ export function drinkFrequency(data, drinkCount) {
   return totals;
 }
 
+/** Per-drink totals for one week (units, kcal, pure-alcohol grams) — feeds the
+ *  Week MVP stats. Only drinks with at least one serving are returned. */
+export function weekDrinkStats(week, kcal, grams) {
+  const totals = new Map();
+  week.forEach((day) => day.forEach((count, j) => {
+    if (!count) return;
+    if (!totals.has(j)) totals.set(j, { index: j, units: 0, kcal: 0, grams: 0 });
+    const t = totals.get(j);
+    t.units += count;
+    t.kcal += count * (kcal[j] || 0);
+    t.grams += count * (grams[j] || 0);
+  }));
+  return [...totals.values()];
+}
+
 /** Total servings of one drink logged across the current week. */
 export function drinkCountThisWeek(week, drinkIndex) {
   return week.reduce((sum, day) => sum + (day[drinkIndex] || 0), 0);

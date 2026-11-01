@@ -3,7 +3,7 @@
  * Open tests.html on the deployed site (https required for crypto.subtle).
  */
 
-import { mondayOf, weekKeyOf, createEmptyData, dayTotal, weekTotal, rolloverWeek, migrateLegacy, drinkFrequency, alcoholGrams, orderByFrequency, drinkCountThisWeek }
+import { mondayOf, weekKeyOf, createEmptyData, dayTotal, weekTotal, rolloverWeek, migrateLegacy, drinkFrequency, alcoholGrams, orderByFrequency, drinkCountThisWeek, weekDrinkStats }
   from './core.js';
 import { hashCredentials } from './auth.js';
 
@@ -75,6 +75,25 @@ test('migrateLegacy carries the personal shortlist through', () => {
   const data = migrateLegacy(raw, 65, Array(65).fill(150));
   assertEqual(data.myDrinks, [0, 15]);
   assertEqual(data.myOrder, [15, 0]);
+});
+
+test('weekDrinkStats aggregates units, kcal and grams per drink', () => {
+  const week = [[2, 0, 1], [0, 1, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0]];
+  const kcal = [100, 500, 200];
+  const grams = [20, 14, 15];
+  const stats = weekDrinkStats(week, kcal, grams);
+  assertEqual(stats.length, 3, 'only drinks with servings appear');
+  const by = Object.fromEntries(stats.map((s) => [s.index, s]));
+  assertEqual(by[0], { index: 0, units: 2, kcal: 200, grams: 40 });
+  assertEqual(by[1], { index: 1, units: 1, kcal: 500, grams: 14 });
+  assertEqual(by[2], { index: 2, units: 1, kcal: 200, grams: 15 });
+  // most-kcal winner differs from most-units winner here — that's the point of the stats
+  const topKcal = stats.reduce((best, s) => (s.kcal > best.kcal ? s : best), stats[0]);
+  assertEqual(topKcal.index, 1);
+});
+
+test('weekDrinkStats returns empty for a dry week', () => {
+  assertEqual(weekDrinkStats([[0, 0], [0, 0]], [100, 100], [10, 10]), []);
 });
 
 test('drinkCountThisWeek sums a drink across all 7 days', () => {

@@ -5,7 +5,7 @@
  * (≤7×19 numbers), so simplicity wins over surgical DOM updates.
  */
 
-import { DAY_NAMES, dayTotal, weekTotal, drinkFrequency, alcoholGrams } from './core.js';
+import { DAY_NAMES, dayTotal, weekTotal, drinkFrequency, alcoholGrams, weekDrinkStats } from './core.js';
 
 const MS_PER_DAY = 864e5;
 
@@ -153,7 +153,9 @@ export function createUI(actions) {
     ireland: 'Ireland',
     mexico: 'Mexico',
     usa: 'USA',
-    canada: 'Canada (Toronto)',
+    canada: 'Canada',
+    toronto: 'Toronto (LCBO)',
+    tbs: 'The Beer Store (Ontario)',
     spirits: 'Spirits & wine',
   };
   const pathLabel = (seg) => PATH_LABELS[seg] || seg;
@@ -231,6 +233,35 @@ export function createUI(actions) {
     }
   }
 
+  const topBy = (stats, key) => stats.reduce((best, t) => (t[key] > best[key] ? t : best), stats[0]);
+
+  /** Week MVPs: which drink won units / pure alcohol / calories. */
+  function renderMvps(drinks, data) {
+    const host = $('mvps');
+    host.innerHTML = '';
+    const grams = drinks.map((drink) => drink.grams || 0);
+    const stats = weekDrinkStats(data.week, data.kcal, grams);
+    if (stats.length === 0) {
+      host.append(el('div', 'hempty', 'No drinks logged this week yet.'));
+      return;
+    }
+    const medals = ['🍺', '🥃', '🔥'];
+    const rows = [
+      ['Most units', topBy(stats, 'units'), (t) => `×${t.units}`],
+      ['Most pure alcohol', topBy(stats, 'grams'), (t) => `${Math.round(t.grams)} g`],
+      ['Most calories', topBy(stats, 'kcal'), (t) => `${t.kcal} kcal`],
+    ];
+    rows.forEach(([label, t, fmt], i) => {
+      const row = el('div', 'mvp-row');
+      row.innerHTML =
+        `<span class="mvp-medal">${medals[i]}</span>` +
+        `<span class="mvp-label">${label}</span>` +
+        `<span class="mvp-name">${drinks[t.index].name}</span>` +
+        `<span class="mvp-value num">${fmt(t)}</span>`;
+      host.append(row);
+    });
+  }
+
   function renderWeekChart(data, selectedDay) {
     const host = $('wk');
     host.innerHTML = '';
@@ -263,12 +294,17 @@ export function createUI(actions) {
       const entry = data.hist[key];
       const total = dayTotal(entry.drinks, entry.kcal);
       const gramsHist = Math.round(alcoholGrams(entry.drinks, drinks.map((d) => d.grams || 0)));
+      // Archived weeks store per-drink unit totals — the MVP is just the max.
+      const topIdx = entry.drinks.indexOf(Math.max(...entry.drinks));
+      const topTxt = entry.drinks[topIdx] > 0
+        ? ` · most: ${drinks[topIdx] ? drinks[topIdx].name : '?'} ×${entry.drinks[topIdx]}`
+        : '';
       const monday = new Date(`${key}T00:00:00`);
       const sunday = new Date(monday.getTime() + 6 * MS_PER_DAY);
       const row = el('div', 'hrow');
       row.innerHTML =
         `<span class="hr-l num">${fmtDayMonth(monday)} – ${fmtDayMonth(sunday)}` +
-        `<span class="hr-s num">avg ${Math.round(total / 7)} kcal/day · ${gramsHist} g alcohol</span></span>` +
+        `<span class="hr-s num">avg ${Math.round(total / 7)} kcal/day · ${gramsHist} g alcohol${topTxt}</span></span>` +
         `<span class="hr-v num">${total} kcal</span>`;
       host.append(row);
     }
@@ -320,6 +356,7 @@ export function createUI(actions) {
     renderCatalog(drinks, data, filterText, actions);
     $('editListBtn').textContent = listEditMode ? 'Done' : 'Edit';
     renderWeekChart(data, selectedDay);
+    renderMvps(drinks, data);
     renderHistory(data, drinks, data.weekKey);
     renderKcalEditor(drinks, data, actions.onUpdateKcal);
   }
