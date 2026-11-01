@@ -102,6 +102,17 @@ button { font: inherit; color: inherit; }
 .wkl { font-size: 10px; color: var(--text3); }
 .wkv { font-size: 10px; color: var(--text2); }
 
+/* ------------------------------ week MVPs ------------------------------ */
+.mvp-row {
+  display: flex; align-items: baseline; gap: 8px;
+  padding: 10px 12px; margin-bottom: 6px;
+  background: var(--card); border: 1px solid var(--border); border-radius: 12px; font-size: 14px;
+}
+.mvp-medal { flex-shrink: 0; }
+.mvp-label { color: var(--text3); font-size: 12px; width: 108px; flex-shrink: 0; }
+.mvp-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.mvp-value { font-weight: 700; font-size: 15px; color: var(--accent); }
+
 /* -------------------------------- history ------------------------------ */
 .hrow {
   display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
