@@ -7,7 +7,7 @@
 import { DRINKS } from './drinks.js';
 import {
   DAY_NAMES, weekKeyOf, createEmptyData, rolloverWeek, migrateLegacy,
-  drinkFrequency, orderByFrequency, drinkCountThisWeek,
+  drinkFrequency, orderByFrequency, drinkCountThisWeek, entryStats,
 } from './core.js';
 import {
   loadRegistry, saveRegistry, loadUserData, saveUserData,
@@ -17,6 +17,7 @@ import { AuthError, createAccount, verifyLogin } from './auth.js';
 import { createUI } from './ui.js';
 
 const MS_PER_DAY = 864e5;
+const fmtDayMonthFor = (date) => `${date.getDate()}/${date.getMonth() + 1}`;
 const DEFAULT_KCAL = DRINKS.map((drink) => drink.kcal);
 /** New accounts start with the essentials: standard, Qingdao, Asahi, vodka, wine. */
 const DEFAULT_MY_DRINKS = [0, 1, 15, 21, 22];
@@ -73,7 +74,11 @@ function loadUserLog(user) {
     loaded.myOrder = orderByFrequency(loaded.myDrinks, drinkFrequency(loaded, DRINKS.length));
   }
   // Archive the previous week if the calendar has moved on since last visit.
+  const previousWeekKey = loaded.weekKey;
   data = rolloverWeek(loaded, weekKeyOf(new Date()));
+  if (data.weekKey !== previousWeekKey) {
+    selectedDay = (new Date().getDay() + 6) % 7; // land on today in the fresh week
+  }
   persist();
 }
 
@@ -146,6 +151,46 @@ const ui = createUI({
     persist();
     refresh();
     ui.toast(`${DRINKS[drinkIndex].name}: ${value} kcal`);
+  },
+  onOpenWeek: (weekKey) => {
+    const entry = data.hist[weekKey];
+    if (!entry) return;
+    const grams = DRINKS.map((d) => d.grams || 0);
+    const kcal = entry.kcal && entry.kcal.length ? entry.kcal : data.kcal;
+    const { total, gramsTotal, stats } = entryStats(entry, kcal, grams);
+    const top = (key) => stats.length ? stats.reduce((b, s) => (s[key] > b[key] ? s : b), stats[0]) : null;
+    const tU = top('units'); const tG = top('grams'); const tK = top('kcal');
+    const monday = new Date(`${weekKey}T00:00:00`);
+    const sunday = new Date(monday.getTime() + 6 * MS_PER_DAY);
+    const days = entry.week
+      ? entry.week.map((d) => dayTotal(d, kcal))
+      : null;
+    let heaviestDay = null;
+    if (days) {
+      const maxIdx = days.indexOf(Math.max(...days));
+      if (days[maxIdx] > 0) heaviestDay = `${DAY_NAMES[maxIdx]} — ${days[maxIdx]} kcal`;
+    }
+    ui.showWeekDetail({
+      title: `Week ${fmtDayMonthFor(monday)} – ${fmtDayMonthFor(sunday)}`,
+      totalKcal: total,
+      totalGrams: Math.round(gramsTotal),
+      avgKcal: Math.round(total / 7),
+      heaviestDay,
+      mvps: [
+        tU ? ['Most units', DRINKS[tU.index].name, `×${tU.units}`] : null,
+        tG ? ['Most alcohol', DRINKS[tG.index].name, `${Math.round(tG.grams)} g`] : null,
+        tK ? ['Most calories', DRINKS[tK.index].name, `${tK.kcal} kcal`] : null,
+      ].filter(Boolean),
+      days,
+      drinks: [...stats].sort((x, y) => y.units - x.units).slice(0, 10)
+        .map((s) => ({ name: DRINKS[s.index].name, units: s.units, kcal: s.kcal, grams: s.grams })),
+    });
+  },
+  onCloseWeek: () => ui.hideWeekDetail(),
+  onResume: () => {
+    if (!currentUser) return;
+    loadUserLog(currentUser); // no-op unless the calendar has moved on
+    refresh();
   },
   onLock: () => {
     clearSession();

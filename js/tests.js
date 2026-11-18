@@ -3,7 +3,7 @@
  * Open tests.html on the deployed site (https required for crypto.subtle).
  */
 
-import { mondayOf, weekKeyOf, createEmptyData, dayTotal, weekTotal, rolloverWeek, migrateLegacy, drinkFrequency, alcoholGrams, orderByFrequency, drinkCountThisWeek, weekDrinkStats }
+import { mondayOf, weekKeyOf, createEmptyData, dayTotal, weekTotal, rolloverWeek, migrateLegacy, drinkFrequency, alcoholGrams, orderByFrequency, drinkCountThisWeek, weekDrinkStats, entryStats, compareWeeks, allTimeStats }
   from './core.js';
 import { hashCredentials } from './auth.js';
 
@@ -75,6 +75,40 @@ test('migrateLegacy carries the personal shortlist through', () => {
   const data = migrateLegacy(raw, 65, Array(65).fill(150));
   assertEqual(data.myDrinks, [0, 15]);
   assertEqual(data.myOrder, [15, 0]);
+});
+
+test('entryStats totals an archived week and keeps per-drink rows', () => {
+  const entry = { drinks: [2, 0, 1], kcal: [100, 500, 200], week: null };
+  const { total, gramsTotal, stats } = entryStats(entry, [100, 500, 200], [20, 14, 15]);
+  assertEqual(total, 400);
+  assertEqual(Math.round(gramsTotal), 55);
+  assertEqual(stats.length, 2);
+});
+
+test('compareWeeks computes pct and nulls on zero baseline', () => {
+  assertEqual(compareWeeks(800, 70, 1000, 90), { kcalDeltaPct: -20, gramsDelta: -20 });
+  assertEqual(compareWeeks(500, 60, 0, 0), { kcalDeltaPct: null, gramsDelta: 60 });
+});
+
+test('allTimeStats finds lightest and heaviest weeks', () => {
+  const hist = {
+    '2026-10-26': { drinks: [1], kcal: [200] },
+    '2026-11-02': { drinks: [5], kcal: [200] },
+  };
+  const s = allTimeStats(hist, [[1]], [200], [20]);
+  assertEqual(s.weeks, 3);
+  assertEqual(s.lightest.key, '2026-10-26');
+  assertEqual(s.heaviest.key, '2026-11-02');
+  assertEqual(s.totalKcal, 1400);
+});
+
+test('rollover archives keep the day matrix for week-detail charts', () => {
+  const data = createEmptyData(2, [100, 200]);
+  data.weekKey = '2026-10-19';
+  data.week[3][1] = 2;
+  const rolled = rolloverWeek(data, '2026-10-26');
+  assertEqual(rolled.hist['2026-10-19'].week[3][1], 2, 'matrix preserved');
+  assertEqual(weekTotal(rolled.week, rolled.kcal), 0);
 });
 
 test('weekDrinkStats aggregates units, kcal and grams per drink', () => {

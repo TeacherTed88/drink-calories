@@ -76,7 +76,7 @@ export function rolloverWeek(data, todayKey) {
     weekKey: todayKey,
   };
   if (data.weekKey && weekHasEntries(data.week)) {
-    next.hist[data.weekKey] = { drinks: drinkTotals(data.week), kcal: [...data.kcal] };
+    next.hist[data.weekKey] = { drinks: drinkTotals(data.week), kcal: [...data.kcal], week: data.week.map((d) => [...d]) };
   }
   // The personal-list order is computed ONCE per week, here, from the week
   // that just ended — mid-week taps never reshuffle the list (user request).
@@ -123,6 +123,52 @@ export function drinkCountThisWeek(week, drinkIndex) {
 /** Pure alcohol in grams for one day (or any counts row): count × per-serving grams. */
 export function alcoholGrams(counts, grams) {
   return counts.reduce((sum, count, j) => sum + count * (grams[j] || 0), 0);
+}
+
+/** Stats for an ARCHIVED week entry ({drinks: per-drink unit totals}) —
+ *  same shape of output as weekDrinkStats, plus week totals. */
+export function entryStats(entry, kcal, grams) {
+  const stats = [];
+  let total = 0;
+  let gramsTotal = 0;
+  (entry.drinks || []).forEach((units, j) => {
+    if (!units) return;
+    const kcalPart = units * (kcal[j] || 0);
+    const gramsPart = units * (grams[j] || 0);
+    stats.push({ index: j, units, kcal: kcalPart, grams: gramsPart });
+    total += kcalPart;
+    gramsTotal += gramsPart;
+  });
+  return { total, gramsTotal, stats };
+}
+
+/** Week-over-week comparison. Any zero in the previous week makes a
+ *  percentage meaningless — deltaPct is null then. */
+export function compareWeeks(currentTotal, currentGrams, prevTotal, prevGrams) {
+  const pct = (now, before) => (before > 0 ? Math.round(((now - before) / before) * 100) : null);
+  return {
+    kcalDeltaPct: pct(currentTotal, prevTotal),
+    gramsDelta: Math.round(currentGrams - prevGrams),
+  };
+}
+
+/** All-time rollups across archived weeks + the live one. */
+export function allTimeStats(entries, currentWeek, kcal, grams) {
+  const rows = Object.entries(entries)
+    .map(([key, e]) => ({ key, ...entryStats(e, kcal, grams) }));
+  const current = weekTotal(currentWeek, kcal);
+  const currentG = currentWeek.reduce((s, d) => s + alcoholGrams(d, grams), 0);
+  const totals = rows.reduce((acc, r) => ({ kcal: acc.kcal + r.total, grams: acc.grams + r.gramsTotal }),
+    { kcal: current, grams: currentG });
+  const byKcal = [...rows].sort((a, b) => a.total - b.total);
+  return {
+    weeks: rows.length + 1,
+    totalKcal: Math.round(totals.kcal),
+    totalGrams: Math.round(totals.grams),
+    avgKcal: Math.round((totals.kcal) / (rows.length + 1)),
+    lightest: byKcal.length ? { key: byKcal[0].key, kcal: byKcal[0].total } : null,
+    heaviest: byKcal.length ? { key: byKcal[byKcal.length - 1].key, kcal: byKcal[byKcal.length - 1].total } : null,
+  };
 }
 
 /** Stable sort of drink indexes by consumption, highest first. Ties keep the

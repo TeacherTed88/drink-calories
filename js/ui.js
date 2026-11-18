@@ -233,6 +233,101 @@ export function createUI(actions) {
     }
   }
 
+  /** "vs last week" banner under the current-week header. */
+  function renderComparison(data, drinks) {
+    const host = $('wkCompare');
+    const keys = Object.keys(data.hist).sort().reverse();
+    if (keys.length === 0) { host.textContent = ''; return; }
+    const prev = data.hist[keys[0]];
+    const grams = drinks.map((d) => d.grams || 0);
+    const prevTotal = dayTotal(prev.drinks, prev.kcal && prev.kcal.length ? prev.kcal : data.kcal);
+    const prevGrams = alcoholGrams(prev.drinks, grams);
+    const nowTotal = weekTotal(data.week, data.kcal);
+    const nowGrams = data.week.reduce((s, d) => s + alcoholGrams(d, grams), 0);
+    const before = prevTotal > 0 ? Math.round(((nowTotal - prevTotal) / prevTotal) * 100) : null;
+    const kcalTxt = before === null ? '' : `kcal ${before > 0 ? '+' : ''}${before}%`;
+    const gTxt = `alcohol ${nowGrams - prevGrams > 0 ? '+' : ''}${Math.round(nowGrams - prevGrams)} g`;
+    host.textContent = `vs ${keys[0].slice(8)}/${keys[0].slice(5, 7)} — ${[kcalTxt, gTxt].filter(Boolean).join(' · ')}`;
+  }
+
+  /** All-time rollup line above the history list. */
+  function renderAllTime(data, drinks) {
+    const host = $('histSummary');
+    const keys = Object.keys(data.hist);
+    if (keys.length === 0) { host.textContent = ''; return; }
+    const grams = drinks.map((d) => d.grams || 0);
+    const rows = keys.map((k) => {
+      const e = data.hist[k];
+      return { kcal: dayTotal(e.drinks, e.kcal && e.kcal.length ? e.kcal : data.kcal),
+               grams: alcoholGrams(e.drinks, grams) };
+    });
+    const cur = weekTotal(data.week, data.kcal);
+    const tot = rows.reduce((s, r) => s + r.kcal, cur);
+    const avg = Math.round(tot / (rows.length + 1));
+    const sorted = [...rows].sort((x, y) => x.kcal - y.kcal);
+    const light = sorted[0], heavy = sorted[sorted.length - 1];
+    host.textContent = `${rows.length + 1} weeks · avg ${avg} kcal/week · lightest ${light.kcal} · heaviest ${heavy.kcal}`;
+  }
+
+  /** Week-detail sheet (opened from a history row). */
+  function showWeekDetail(model) {
+    $('wdTitle').textContent = model.title;
+    const body = $('wdBody');
+    body.innerHTML = '';
+    const totals = el('div', 'wd-totals');
+    totals.innerHTML =
+      `<div><b class="num">${model.totalKcal}</b><span>kcal</span></div>` +
+      `<div><b class="num">${model.totalGrams}</b><span>g alcohol</span></div>` +
+      `<div><b class="num">${model.avgKcal}</b><span>kcal/day avg</span></div>`;
+    body.append(totals);
+
+    if (model.heaviestDay) {
+      body.append(el('div', 'wd-line', `Heaviest day: <b>${model.heaviestDay}</b>`));
+    }
+
+    if (model.mvps.length) {
+      const m = el('div', 'wd-mvps');
+      model.mvps.forEach(([label, name, value]) => {
+        m.append(el('div', 'wd-mvp', `<span>${label}</span><b>${name}</b><span class="num">${value}</span>`));
+      });
+      body.append(m);
+    }
+
+    if (model.days) {
+      const chart = el('div', 'wd-days');
+      const max = Math.max(...model.days, 1);
+      const bars = el('div', 'wd-bars');
+      model.days.forEach((v, i) => {
+        const cell = el('div', 'wkc');
+        const h = v > 0 ? Math.max(3, Math.round((v / max) * 70)) : 2;
+        cell.innerHTML = `<span class="wkv num">${v || ''}</span><div class="bar" style="height:${h}px"></div><span class="wkl">${DAY_NAMES[i][0]}</span>`;
+        bars.append(cell);
+      });
+      chart.append(bars);
+      body.append(chart);
+    }
+
+    if (model.drinks.length) {
+      const table = el('div', 'wd-table');
+      model.drinks.forEach((d) => {
+        table.append(el('div', 'wd-tr',
+          `<span class="wd-tname">${d.name}</span>` +
+          `<span class="num">×${d.units}</span>` +
+          `<span class="num">${d.kcal}</span>` +
+          `<span class="num">${Math.round(d.grams)} g</span>`));
+      });
+      const head = el('div', 'wd-tr wd-th',
+        '<span class="wd-tname">Drink</span><span>units</span><span>kcal</span><span>alcohol</span>');
+      table.prepend(head);
+      body.append(table);
+    }
+    $('weekDetail').style.display = 'flex';
+  }
+
+  function hideWeekDetail() {
+    $('weekDetail').style.display = 'none';
+  }
+
   const topBy = (stats, key) => stats.reduce((best, t) => (t[key] > best[key] ? t : best), stats[0]);
 
   /** Week MVPs: which drink won units / pure alcohol / calories. */
@@ -301,7 +396,8 @@ export function createUI(actions) {
         : '';
       const monday = new Date(`${key}T00:00:00`);
       const sunday = new Date(monday.getTime() + 6 * MS_PER_DAY);
-      const row = el('div', 'hrow');
+      const row = el('button', 'hrow hrow-btn');
+      row.onclick = () => actions.onOpenWeek(key);
       row.innerHTML =
         `<span class="hr-l num">${fmtDayMonth(monday)} – ${fmtDayMonth(sunday)}` +
         `<span class="hr-s num">avg ${Math.round(total / 7)} kcal/day · ${gramsHist} g alcohol${topTxt}</span></span>` +
@@ -355,6 +451,8 @@ export function createUI(actions) {
     renderPersonalList(drinks, data, selectedDay, actions.onIncrement, actions.onDecrement, filterText, actions);
     renderCatalog(drinks, data, filterText, actions);
     $('editListBtn').textContent = listEditMode ? 'Done' : 'Edit';
+    renderComparison(data, drinks);
+    renderAllTime(data, drinks);
     renderWeekChart(data, selectedDay);
     renderMvps(drinks, data);
     renderHistory(data, drinks, data.weekKey);
@@ -365,6 +463,12 @@ export function createUI(actions) {
   function bind() {
     bindAuth();
     $('drinkFilter').oninput = () => { if (lastView) render(lastView); };
+    // The week rolls over on data load (sign-in). If the app sits open past
+    // midnight Sunday, this re-checks the calendar every time it comes back
+    // to the foreground — no refresh needed on Monday morning.
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) actions.onResume();
+    });
     $('editListBtn').onclick = () => {
       listEditMode = !listEditMode;
       if (lastView) render(lastView);
@@ -372,6 +476,7 @@ export function createUI(actions) {
     $('clearDay').onclick = actions.onClearDay;
     $('lockBtn').onclick = actions.onLock;
     $('userChip').onclick = actions.onLock; // tapping your name signs out too
+    $('wdClose').onclick = actions.onCloseWeek;
     let editorOpen = false;
     $('gearBtn').onclick = () => {
       editorOpen = !editorOpen;
@@ -382,5 +487,5 @@ export function createUI(actions) {
     };
   }
 
-  return { bind, render, showAuth, hideAuth, toast };
+  return { bind, render, showAuth, hideAuth, toast, showWeekDetail, hideWeekDetail };
 }
