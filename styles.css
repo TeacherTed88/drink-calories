@@ -149,6 +149,46 @@ button { font: inherit; color: inherit; }
 .addbtn:active { background: var(--accent); color: #fff; }
 .cbtn.rm { border-color: #e5604d; color: #e5604d; }
 
+/* --------------------------- week detail sheet --------------------------- */
+.week-detail {
+  position: fixed; inset: 0; z-index: 15; display: none;
+  align-items: flex-end; justify-content: center; background: rgba(0,0,0,.5);
+}
+.wd-card {
+  width: 100%; max-width: 480px; max-height: 86vh; overflow-y: auto;
+  background: var(--bg); border: 1px solid var(--border); border-radius: 18px 18px 0 0;
+  padding: 16px 16px calc(20px + env(safe-area-inset-bottom));
+}
+.wd-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.wd-head h2 { font-size: 17px; margin: 0; }
+.wd-totals { display: flex; gap: 8px; margin-bottom: 10px; }
+.wd-totals > div {
+  flex: 1; text-align: center; background: var(--card); border: 1px solid var(--border);
+  border-radius: 12px; padding: 10px 4px;
+}
+.wd-totals b { display: block; font-size: 20px; }
+.wd-totals span { font-size: 11px; color: var(--text3); }
+.wd-line { font-size: 13px; color: var(--text2); margin: 8px 2px; }
+.wd-mvps { margin: 10px 0; }
+.wd-mvp {
+  display: flex; gap: 8px; align-items: baseline; font-size: 13px; padding: 7px 10px;
+  background: var(--card); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 6px;
+}
+.wd-mvp span:first-child { color: var(--text3); width: 108px; flex-shrink: 0; }
+.wd-mvp b { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wd-days { margin: 12px 0; }
+.wd-bars { display: flex; gap: 6px; align-items: flex-end; height: 104px; }
+.wd-table { margin-top: 10px; }
+.wd-tr {
+  display: grid; grid-template-columns: 1fr 52px 56px 64px; gap: 6px;
+  padding: 8px 6px; font-size: 13px; border-bottom: 1px solid var(--border);
+}
+.wd-tr span:not(.wd-tname) { text-align: right; }
+.wd-th { color: var(--text3); font-size: 11px; font-weight: 600; }
+.wd-tname { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hrow-btn { width: 100%; text-align: left; background: transparent; border-left: none; border-right: none; cursor: pointer; }
+button.hrow { border-top: none; }
+
 /* -------------------------------- toast -------------------------------- */
 .toast {
   position: fixed; left: 50%; bottom: 32px; transform: translateX(-50%) translateY(20px);

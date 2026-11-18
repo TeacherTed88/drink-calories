@@ -43,6 +43,7 @@
       <div class="lbl" id="wrange"></div>
       <div class="big num"><span id="wkTotal">0</span> <small>kcal this week</small></div>
       <div class="lbl num" id="wkGrams"></div>
+      <div class="lbl num" id="wkCompare"></div>
     </div>
     <span class="user-chip" id="userChip" title="Signed in as — tap to sign out" style="cursor:pointer"></span>
     <div class="hdr-actions">
@@ -81,6 +82,13 @@
   <div class="sec">PAST WEEKS</div>
   <div id="hist"></div>
 </main>
+
+<div class="week-detail" id="weekDetail">
+  <div class="wd-card">
+    <div class="wd-head"><h2 id="wdTitle"></h2><button class="ibtn" id="wdClose">&#10005;</button></div>
+    <div id="wdBody"></div>
+  </div>
+</div>
 
 <div class="toast" id="toast"></div>
 
