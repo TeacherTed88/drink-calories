@@ -233,6 +233,18 @@ export function createUI(actions) {
     }
   }
 
+  /** Isolated section render: on failure, show the error in-place instead of
+   *  aborting the whole repaint (and leaving the screen half-blank). */
+  function safe(sectionId, fn) {
+    try {
+      fn();
+    } catch (err) {
+      console.error(`render ${sectionId} failed:`, err);
+      const host = $(sectionId);
+      if (host) host.innerHTML = `<div class="hempty">\u26a0 ${sectionId}: ${err.message}</div>`;
+    }
+  }
+
   /** "vs last week" banner under the current-week header. */
   function renderComparison(data, drinks) {
     const host = $('wkCompare');
@@ -377,10 +389,15 @@ export function createUI(actions) {
   function renderHistory(data, drinks, currentWeekKey) {
     const host = $('hist');
     host.innerHTML = '';
-    const keys = Object.keys(data.hist)
+    let keys = Object.keys(data.hist)
       .filter((key) => key !== currentWeekKey)
       .sort()
       .reverse();
+    // Stale-weekKey safety net: if filtering hid everything but archives
+    // exist, show them anyway — the data is real even if the key is odd.
+    if (keys.length === 0 && Object.keys(data.hist).length > 0) {
+      keys = Object.keys(data.hist).sort().reverse();
+    }
     if (keys.length === 0) {
       host.append(el('div', 'hempty', 'No finished weeks yet — each week is saved automatically when a new one starts.'));
       return;
@@ -451,12 +468,14 @@ export function createUI(actions) {
     renderPersonalList(drinks, data, selectedDay, actions.onIncrement, actions.onDecrement, filterText, actions);
     renderCatalog(drinks, data, filterText, actions);
     $('editListBtn').textContent = listEditMode ? 'Done' : 'Edit';
-    renderComparison(data, drinks);
-    renderAllTime(data, drinks);
-    renderWeekChart(data, selectedDay);
-    renderMvps(drinks, data);
-    renderHistory(data, drinks, data.weekKey);
-    renderKcalEditor(drinks, data, actions.onUpdateKcal);
+    // Each section renders isolated: one bad section can never take down
+    // the rest of the screen again. Failures show on-screen for diagnosis.
+    safe('wkCompare', () => renderComparison(data, drinks));
+    safe('histSummary', () => renderAllTime(data, drinks));
+    safe('wk', () => renderWeekChart(data, selectedDay));
+    safe('mvps', () => renderMvps(drinks, data));
+    safe('hist', () => renderHistory(data, drinks, data.weekKey));
+    safe('edit', () => renderKcalEditor(drinks, data, actions.onUpdateKcal));
   }
 
   /* ------------------------------ wiring ------------------------------ */
